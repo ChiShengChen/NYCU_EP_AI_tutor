@@ -2,12 +2,13 @@
 
 import ReactMarkdown from "react-markdown";
 import remarkMath from "remark-math";
+import remarkGfm from "remark-gfm";
 import rehypeKatex from "rehype-katex";
 
 export function MarkdownRenderer({ content }: { content: string }) {
   return (
     <ReactMarkdown
-      remarkPlugins={[remarkMath]}
+      remarkPlugins={[remarkGfm, remarkMath]}
       rehypePlugins={[rehypeKatex]}
       components={{
         h1: ({ children }) => (
@@ -31,7 +32,7 @@ export function MarkdownRenderer({ content }: { content: string }) {
         li: ({ children }) => <li className="leading-relaxed">{children}</li>,
         blockquote: ({ children }) => {
           const text = String(children);
-          const isWarning = text.includes("⚠️") || text.includes("COUNTEREXAMPLE") || text.includes("WRONG");
+          const isWarning = text.includes("\u26a0\ufe0f") || text.includes("COUNTEREXAMPLE") || text.includes("WRONG");
           return (
             <blockquote
               className={`border-l-4 pl-3 my-2 py-1 rounded-r ${
@@ -60,17 +61,28 @@ export function MarkdownRenderer({ content }: { content: string }) {
           );
         },
         table: ({ children }) => (
-          <div className="overflow-x-auto my-2">
-            <table className="min-w-full border-collapse text-sm">{children}</table>
+          <div className="overflow-x-auto my-3 rounded-lg border border-slate-200">
+            <table className="min-w-full border-collapse text-sm">
+              {children}
+            </table>
           </div>
         ),
+        thead: ({ children }) => (
+          <thead className="bg-slate-100">{children}</thead>
+        ),
+        tbody: ({ children }) => (
+          <tbody className="divide-y divide-slate-200">{children}</tbody>
+        ),
+        tr: ({ children }) => (
+          <tr className="hover:bg-slate-50 transition-colors">{children}</tr>
+        ),
         th: ({ children }) => (
-          <th className="border border-slate-300 bg-slate-100 px-3 py-1.5 text-left font-semibold text-slate-700">
+          <th className="px-3 py-2 text-left font-semibold text-slate-700 border-b-2 border-slate-300 whitespace-nowrap">
             {children}
           </th>
         ),
         td: ({ children }) => (
-          <td className="border border-slate-200 px-3 py-1.5 text-slate-600">{children}</td>
+          <td className="px-3 py-2 text-slate-600">{children}</td>
         ),
         strong: ({ children }) => (
           <strong className="font-semibold text-slate-900">{children}</strong>
