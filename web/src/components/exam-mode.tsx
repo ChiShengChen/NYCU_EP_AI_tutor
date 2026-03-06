@@ -485,22 +485,24 @@ function ExamView({
         ) : (
           <>
             {showConfirm ? (
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-slate-500">
+              <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2">
+                <span className="text-sm text-slate-500 text-right">
                   {answeredCount < total ? `還有 ${total - answeredCount} 題未答，確定交卷？` : "確定交卷？"}
                 </span>
-                <button
-                  onClick={onSubmit}
-                  className="px-4 py-2 rounded-xl bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition-colors"
-                >
-                  確定交卷
-                </button>
-                <button
-                  onClick={() => setShowConfirm(false)}
-                  className="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 text-sm font-medium hover:bg-slate-50 transition-colors"
-                >
-                  繼續作答
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={onSubmit}
+                    className="px-4 py-2 rounded-xl bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition-colors"
+                  >
+                    確定交卷
+                  </button>
+                  <button
+                    onClick={() => setShowConfirm(false)}
+                    className="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 text-sm font-medium hover:bg-slate-50 transition-colors"
+                  >
+                    繼續作答
+                  </button>
+                </div>
               </div>
             ) : (
               <button

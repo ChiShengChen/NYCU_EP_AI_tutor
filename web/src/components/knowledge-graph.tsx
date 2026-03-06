@@ -67,12 +67,7 @@ const CATEGORY_COLORS: Record<string, { bg: string; border: string; text: string
   laser: { bg: "bg-red-50", border: "border-red-300", text: "text-red-700", label: "雷射物理" },
 };
 
-const EDGE_COLORS: Record<string, string> = {
-  optics: "#93c5fd",
-  resonator: "#6ee7b7",
-  quantum: "#c4b5fd",
-  laser: "#fca5a5",
-};
+const CATEGORY_ORDER: Array<ConceptNode["category"]> = ["optics", "resonator", "quantum", "laser"];
 
 /* ─── Component ─── */
 
@@ -128,7 +123,7 @@ export function KnowledgeGraph({ onBack, onNavigate }: KnowledgeGraphProps) {
       <div className="flex-1 overflow-auto px-4 py-6">
         <div className="max-w-5xl mx-auto space-y-6">
           {/* Legend */}
-          <div className="flex flex-wrap items-center gap-4 justify-center">
+          <div className="flex flex-wrap items-center gap-3 sm:gap-4 justify-center">
             {Object.entries(CATEGORY_COLORS).map(([key, val]) => (
               <div key={key} className="flex items-center gap-1.5">
                 <div className={`w-3 h-3 rounded-full ${val.bg} border ${val.border}`} />
@@ -141,12 +136,12 @@ export function KnowledgeGraph({ onBack, onNavigate }: KnowledgeGraphProps) {
             </div>
           </div>
 
-          {/* Graph SVG */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm overflow-x-auto">
+          {/* ── Desktop: SVG Graph ── */}
+          <div className="hidden md:block bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
             <svg
               viewBox={`0 0 ${svgWidth} ${svgHeight}`}
               className="w-full"
-              style={{ minWidth: 600, maxHeight: "60vh" }}
+              style={{ maxHeight: "60vh" }}
             >
               <defs>
                 <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
@@ -164,7 +159,6 @@ export function KnowledgeGraph({ onBack, onNavigate }: KnowledgeGraphProps) {
                 const active = hoveredNode ?? selectedNode;
                 const isActive = active && (edge.from === active || edge.to === active);
 
-                // Shorten line so it doesn't overlap with node
                 const dx = to.x - from.x;
                 const dy = to.y - from.y;
                 const len = Math.sqrt(dx * dx + dy * dy);
@@ -193,7 +187,6 @@ export function KnowledgeGraph({ onBack, onNavigate }: KnowledgeGraphProps) {
 
               {/* Nodes */}
               {NODES.map((node) => {
-                const colors = CATEGORY_COLORS[node.category];
                 const active = hoveredNode ?? selectedNode;
                 const isHighlighted = !active || connectedNodes.has(node.id);
                 const isSelected = selectedNode === node.id;
@@ -243,9 +236,88 @@ export function KnowledgeGraph({ onBack, onNavigate }: KnowledgeGraphProps) {
             </svg>
           </div>
 
-          {/* Selected node detail */}
+          {/* ── Mobile: Card-based list ── */}
+          <div className="md:hidden space-y-4">
+            {CATEGORY_ORDER.map((cat) => {
+              const colors = CATEGORY_COLORS[cat];
+              const catNodes = NODES.filter((n) => n.category === cat);
+              return (
+                <div key={cat} className={`${colors.bg} border ${colors.border} rounded-2xl p-4`}>
+                  <h3 className={`text-sm font-semibold ${colors.text} mb-3`}>{colors.label}</h3>
+                  <div className="space-y-2">
+                    {catNodes.map((node) => {
+                      const isSelected = selectedNode === node.id;
+                      const prereqs = EDGES.filter((e) => e.to === node.id).map((e) => nodeMap.get(e.from)!);
+                      const nexts = EDGES.filter((e) => e.from === node.id).map((e) => nodeMap.get(e.to)!);
+                      return (
+                        <button
+                          key={node.id}
+                          onClick={() => setSelectedNode(isSelected ? null : node.id)}
+                          className={`w-full text-left rounded-xl px-4 py-3 transition-all duration-200 ${
+                            isSelected
+                              ? "bg-white ring-2 ring-indigo-400 shadow-sm"
+                              : "bg-white/70 hover:bg-white"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="font-medium text-slate-800 text-sm">{node.label}</span>
+                            <span className="text-xs text-slate-400">W{node.week}</span>
+                          </div>
+                          {isSelected && (
+                            <div className="mt-2 space-y-1.5 text-xs">
+                              {prereqs.length > 0 && (
+                                <div className="flex flex-wrap items-center gap-1">
+                                  <span className="text-slate-500">先修：</span>
+                                  {prereqs.map((n) => (
+                                    <span
+                                      key={n.id}
+                                      onClick={(e) => { e.stopPropagation(); setSelectedNode(n.id); }}
+                                      className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 hover:bg-indigo-100 hover:text-indigo-700 cursor-pointer"
+                                    >
+                                      {n.label}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                              {nexts.length > 0 && (
+                                <div className="flex flex-wrap items-center gap-1">
+                                  <span className="text-slate-500">後續：</span>
+                                  {nexts.map((n) => (
+                                    <span
+                                      key={n.id}
+                                      onClick={(e) => { e.stopPropagation(); setSelectedNode(n.id); }}
+                                      className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 hover:bg-indigo-100 hover:text-indigo-700 cursor-pointer"
+                                    >
+                                      {n.label}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                              {prereqs.length === 0 && nexts.length === 0 && (
+                                <span className="text-slate-400">獨立概念</span>
+                              )}
+                              {onNavigate && (
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); onNavigate("teaching", node.week); }}
+                                  className="mt-1 px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-medium hover:bg-indigo-700 transition-colors"
+                                >
+                                  前往 Week {node.week} 教學
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Selected node detail — desktop only */}
           {selectedNodeData && (
-            <div className={`${CATEGORY_COLORS[selectedNodeData.category].bg} border ${CATEGORY_COLORS[selectedNodeData.category].border} rounded-2xl p-5`}>
+            <div className={`hidden md:block ${CATEGORY_COLORS[selectedNodeData.category].bg} border ${CATEGORY_COLORS[selectedNodeData.category].border} rounded-2xl p-5`}>
               <div className="flex items-center justify-between mb-3">
                 <h3 className={`text-base font-semibold ${CATEGORY_COLORS[selectedNodeData.category].text}`}>
                   {selectedNodeData.label}
@@ -254,7 +326,6 @@ export function KnowledgeGraph({ onBack, onNavigate }: KnowledgeGraphProps) {
               </div>
 
               <div className="space-y-2 text-sm text-slate-600">
-                {/* Prerequisites */}
                 <div>
                   <span className="font-medium">先修概念：</span>
                   {EDGES.filter((e) => e.to === selectedNodeData.id).length === 0 ? (
@@ -275,7 +346,6 @@ export function KnowledgeGraph({ onBack, onNavigate }: KnowledgeGraphProps) {
                   )}
                 </div>
 
-                {/* Next concepts */}
                 <div>
                   <span className="font-medium">後續概念：</span>
                   {EDGES.filter((e) => e.from === selectedNodeData.id).length === 0 ? (
