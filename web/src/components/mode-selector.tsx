@@ -1,7 +1,7 @@
 "use client";
 
 interface ModeSelectorProps {
-  onSelectMode: (mode: "teaching" | "qa" | "quiz" | "dashboard") => void;
+  onSelectMode: (mode: "teaching" | "qa" | "quiz" | "dashboard" | "history") => void;
 }
 
 export function ModeSelector({ onSelectMode }: ModeSelectorProps) {
@@ -20,8 +20,8 @@ export function ModeSelector({ onSelectMode }: ModeSelectorProps) {
           <p className="text-slate-500">請選擇學習模式</p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 max-w-5xl w-full">
-          {/* Teaching Mode Card */}
+        {/* Top row: 3 main modes */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 max-w-4xl w-full mb-5">
           <button
             onClick={() => onSelectMode("teaching")}
             className="group flex flex-col items-center text-center p-6 bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md hover:border-indigo-300 hover:-translate-y-1 transition-all duration-200 cursor-pointer"
@@ -36,7 +36,6 @@ export function ModeSelector({ onSelectMode }: ModeSelectorProps) {
             </span>
           </button>
 
-          {/* Free Q&A Card */}
           <button
             onClick={() => onSelectMode("qa")}
             className="group flex flex-col items-center text-center p-6 bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md hover:border-indigo-300 hover:-translate-y-1 transition-all duration-200 cursor-pointer"
@@ -51,7 +50,6 @@ export function ModeSelector({ onSelectMode }: ModeSelectorProps) {
             </span>
           </button>
 
-          {/* Quiz Mode Card */}
           <button
             onClick={() => onSelectMode("quiz")}
             className="group flex flex-col items-center text-center p-6 bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md hover:border-indigo-300 hover:-translate-y-1 transition-all duration-200 cursor-pointer"
@@ -65,20 +63,30 @@ export function ModeSelector({ onSelectMode }: ModeSelectorProps) {
               開始測驗
             </span>
           </button>
+        </div>
 
-          {/* Dashboard Card */}
+        {/* Bottom row: 2 utility modes */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 max-w-2xl w-full">
           <button
             onClick={() => onSelectMode("dashboard")}
-            className="group flex flex-col items-center text-center p-6 bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md hover:border-indigo-300 hover:-translate-y-1 transition-all duration-200 cursor-pointer"
+            className="group flex flex-row items-center text-left p-5 bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md hover:border-indigo-300 hover:-translate-y-0.5 transition-all duration-200 cursor-pointer gap-4"
           >
-            <span className="text-4xl mb-3 group-hover:scale-110 transition-transform">📊</span>
-            <h3 className="text-lg font-semibold text-slate-800 mb-1.5">學習儀表板</h3>
-            <p className="text-sm text-slate-500 mb-5 leading-relaxed">
-              查看掌握度雷達圖、學習趨勢與活動紀錄
-            </p>
-            <span className="px-5 py-2 rounded-xl bg-indigo-600 text-white text-sm font-medium group-hover:bg-indigo-700 transition-colors">
-              查看數據
-            </span>
+            <span className="text-3xl group-hover:scale-110 transition-transform shrink-0">📊</span>
+            <div>
+              <h3 className="text-base font-semibold text-slate-800">學習儀表板</h3>
+              <p className="text-xs text-slate-500 mt-0.5">掌握度雷達圖、學習趨勢與統計</p>
+            </div>
+          </button>
+
+          <button
+            onClick={() => onSelectMode("history")}
+            className="group flex flex-row items-center text-left p-5 bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md hover:border-indigo-300 hover:-translate-y-0.5 transition-all duration-200 cursor-pointer gap-4"
+          >
+            <span className="text-3xl group-hover:scale-110 transition-transform shrink-0">🕒</span>
+            <div>
+              <h3 className="text-base font-semibold text-slate-800">對話歷史</h3>
+              <p className="text-xs text-slate-500 mt-0.5">回顧過去的提問與 AI 回答</p>
+            </div>
           </button>
         </div>
       </div>
