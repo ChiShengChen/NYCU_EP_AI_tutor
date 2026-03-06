@@ -1,7 +1,7 @@
 "use client";
 
 interface ModeSelectorProps {
-  onSelectMode: (mode: "teaching" | "qa" | "quiz") => void;
+  onSelectMode: (mode: "teaching" | "qa" | "quiz" | "dashboard") => void;
 }
 
 export function ModeSelector({ onSelectMode }: ModeSelectorProps) {
@@ -20,16 +20,16 @@ export function ModeSelector({ onSelectMode }: ModeSelectorProps) {
           <p className="text-slate-500">請選擇學習模式</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl w-full">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 max-w-5xl w-full">
           {/* Teaching Mode Card */}
           <button
             onClick={() => onSelectMode("teaching")}
-            className="group flex flex-col items-center text-center p-8 bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md hover:border-indigo-300 hover:-translate-y-1 transition-all duration-200 cursor-pointer"
+            className="group flex flex-col items-center text-center p-6 bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md hover:border-indigo-300 hover:-translate-y-1 transition-all duration-200 cursor-pointer"
           >
-            <span className="text-5xl mb-4 group-hover:scale-110 transition-transform">📖</span>
-            <h3 className="text-xl font-semibold text-slate-800 mb-2">教學模式</h3>
-            <p className="text-sm text-slate-500 mb-6 leading-relaxed">
-              按照講義一週一章，逐頁學習，AI 為你解說每一頁的內容
+            <span className="text-4xl mb-3 group-hover:scale-110 transition-transform">📖</span>
+            <h3 className="text-lg font-semibold text-slate-800 mb-1.5">教學模式</h3>
+            <p className="text-sm text-slate-500 mb-5 leading-relaxed">
+              按照講義逐頁學習，AI 為你解說內容
             </p>
             <span className="px-5 py-2 rounded-xl bg-indigo-600 text-white text-sm font-medium group-hover:bg-indigo-700 transition-colors">
               開始學習
@@ -39,12 +39,12 @@ export function ModeSelector({ onSelectMode }: ModeSelectorProps) {
           {/* Free Q&A Card */}
           <button
             onClick={() => onSelectMode("qa")}
-            className="group flex flex-col items-center text-center p-8 bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md hover:border-indigo-300 hover:-translate-y-1 transition-all duration-200 cursor-pointer"
+            className="group flex flex-col items-center text-center p-6 bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md hover:border-indigo-300 hover:-translate-y-1 transition-all duration-200 cursor-pointer"
           >
-            <span className="text-5xl mb-4 group-hover:scale-110 transition-transform">💬</span>
-            <h3 className="text-xl font-semibold text-slate-800 mb-2">自由問答</h3>
-            <p className="text-sm text-slate-500 mb-6 leading-relaxed">
-              自由提問任何雷射物理的問題，AI 根據教材內容回答
+            <span className="text-4xl mb-3 group-hover:scale-110 transition-transform">💬</span>
+            <h3 className="text-lg font-semibold text-slate-800 mb-1.5">自由問答</h3>
+            <p className="text-sm text-slate-500 mb-5 leading-relaxed">
+              自由提問雷射物理問題，AI 根據教材回答
             </p>
             <span className="px-5 py-2 rounded-xl bg-indigo-600 text-white text-sm font-medium group-hover:bg-indigo-700 transition-colors">
               開始提問
@@ -54,15 +54,30 @@ export function ModeSelector({ onSelectMode }: ModeSelectorProps) {
           {/* Quiz Mode Card */}
           <button
             onClick={() => onSelectMode("quiz")}
-            className="group flex flex-col items-center text-center p-8 bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md hover:border-indigo-300 hover:-translate-y-1 transition-all duration-200 cursor-pointer"
+            className="group flex flex-col items-center text-center p-6 bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md hover:border-indigo-300 hover:-translate-y-1 transition-all duration-200 cursor-pointer"
           >
-            <span className="text-5xl mb-4 group-hover:scale-110 transition-transform">📝</span>
-            <h3 className="text-xl font-semibold text-slate-800 mb-2">自動測驗</h3>
-            <p className="text-sm text-slate-500 mb-6 leading-relaxed">
-              AI 根據你的薄弱概念自動生成測驗，針對性練習
+            <span className="text-4xl mb-3 group-hover:scale-110 transition-transform">📝</span>
+            <h3 className="text-lg font-semibold text-slate-800 mb-1.5">自動測驗</h3>
+            <p className="text-sm text-slate-500 mb-5 leading-relaxed">
+              AI 根據薄弱概念自動生成測驗
             </p>
             <span className="px-5 py-2 rounded-xl bg-indigo-600 text-white text-sm font-medium group-hover:bg-indigo-700 transition-colors">
               開始測驗
+            </span>
+          </button>
+
+          {/* Dashboard Card */}
+          <button
+            onClick={() => onSelectMode("dashboard")}
+            className="group flex flex-col items-center text-center p-6 bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md hover:border-indigo-300 hover:-translate-y-1 transition-all duration-200 cursor-pointer"
+          >
+            <span className="text-4xl mb-3 group-hover:scale-110 transition-transform">📊</span>
+            <h3 className="text-lg font-semibold text-slate-800 mb-1.5">學習儀表板</h3>
+            <p className="text-sm text-slate-500 mb-5 leading-relaxed">
+              查看掌握度雷達圖、學習趨勢與活動紀錄
+            </p>
+            <span className="px-5 py-2 rounded-xl bg-indigo-600 text-white text-sm font-medium group-hover:bg-indigo-700 transition-colors">
+              查看數據
             </span>
           </button>
         </div>
