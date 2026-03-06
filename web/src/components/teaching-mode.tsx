@@ -342,21 +342,21 @@ function PageViewer({
 
       {/* Main Content: Side-by-side on desktop, stacked on mobile */}
       <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
-        {/* Left: Lecture Content */}
+        {/* Left: Original Slide Image */}
         <div className="md:w-1/2 border-b md:border-b-0 md:border-r border-slate-200 flex flex-col">
           <div className="px-3 py-2 bg-slate-50 border-b border-slate-200 shrink-0">
-            <h2 className="text-sm font-medium text-slate-600">📄 講義內容</h2>
+            <h2 className="text-sm font-medium text-slate-600">📄 講義投影片</h2>
           </div>
-          <div className="flex-1 overflow-y-auto px-4 py-4">
-            {loadingPage ? (
-              <div className="flex items-center justify-center h-32 text-slate-400">載入中...</div>
-            ) : pageChunks.length === 0 ? (
-              <div className="flex items-center justify-center h-32 text-slate-400">此頁無內容</div>
-            ) : (
-              <div className="prose prose-sm max-w-none">
-                <MarkdownRenderer content={pageContent} />
-              </div>
-            )}
+          <div className="flex-1 overflow-y-auto flex items-start justify-center bg-slate-100 p-2">
+            <img
+              src={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/slides/week_${weekNumber}_page_${currentPage}.jpg`}
+              alt={`Week ${weekNumber} Page ${currentPage}`}
+              className="max-w-full h-auto rounded-lg shadow-sm"
+              onError={(e) => {
+                (e.target as HTMLImageElement).style.display = "none";
+                (e.target as HTMLImageElement).parentElement!.innerHTML = '<div class="flex items-center justify-center h-32 text-slate-400">此頁無投影片</div>';
+              }}
+            />
           </div>
         </div>
 
