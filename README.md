@@ -2,7 +2,7 @@
 
 # Laser Physics AI Teaching Assistant
 
-AI-powered teaching assistant for the "Introduction to Lasers" course at NYCU Department of Electrophysics.
+RAG-based AI teaching assistant for the "Introduction to Lasers" course at NYCU Department of Electrophysics. Built with Gemini 2.5 Flash, Supabase pgvector, and Vercel AI SDK v6.
 
 ## Live Demo
 

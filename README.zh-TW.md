@@ -2,7 +2,7 @@
 
 # 雷射導論 AI 助教
 
-NYCU 電子物理系「雷射導論」課程 AI 助教系統
+基於 RAG (Retrieval-Augmented Generation) 架構的 AI 助教系統，專為陽明交通大學電子物理系「雷射導論」課程設計。使用 Gemini 2.5 Flash、Supabase pgvector 與 Vercel AI SDK v6 建構。
 
 ## Live Demo
 
