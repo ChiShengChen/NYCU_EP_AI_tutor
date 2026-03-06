@@ -1,0 +1,149 @@
+import os
+import json
+import re
+import numpy as np
+from pathlib import Path
+from dotenv import load_dotenv
+import google.generativeai as genai
+from supabase import create_client
+
+load_dotenv(Path(__file__).parent.parent / "web" / ".env.local")
+
+genai.configure(api_key=os.environ["GOOGLE_GENERATIVE_AI_API_KEY"])
+
+PARSED_DIR = Path(__file__).parent.parent / "parsed_lectures"
+EMBED_MODEL = os.environ.get("EMBEDDING_MODEL", "gemini-embedding-001")
+EMBED_DIM = 768
+
+supabase = create_client(
+    os.environ["NEXT_PUBLIC_SUPABASE_URL"],
+    os.environ["SUPABASE_SERVICE_ROLE_KEY"],
+)
+
+COURSE_SUMMARY = (
+    "This is content from '雷射導論' (Introduction to Lasers), "
+    "a course at NYCU Department of Electrophysics covering laser physics fundamentals: "
+    "resonator optics, Gaussian beams, Fourier optics, blackbody radiation, "
+    "Einstein model, electron-spring model, gain/loss, rate equations, "
+    "oscillation threshold, and laser output power."
+)
+
+
+def chunk_page_markdown(markdown: str, week: int, page: int) -> list[dict]:
+    chunks = []
+    sections = re.split(r"(?=^## )", markdown, flags=re.MULTILINE)
+
+    for section in sections:
+        section = section.strip()
+        if not section or len(section) < 20:
+            continue
+
+        title_match = re.match(r"^## (.+)", section)
+        title = title_match.group(1).strip() if title_match else ""
+
+        is_counter = "⚠️" in section or "COUNTEREXAMPLE" in section or "WRONG" in section
+
+        content_type = "text"
+        if re.search(r"\$\$.*\$\$", section, re.DOTALL):
+            content_type = "formula"
+        elif section.startswith("[Figure:"):
+            content_type = "figure_description"
+
+        contextualized = f"{COURSE_SUMMARY}\n\nWeek {week}, Page {page}: {title}\n\n{section}"
+
+        chunks.append({
+            "week_number": week,
+            "page_number": page,
+            "section_title": title,
+            "content": section,
+            "content_type": content_type,
+            "is_counterexample": is_counter,
+            "metadata": {"contextualized_prefix": f"Week {week}, {title}"},
+            "contextualized_content": contextualized,
+        })
+
+    if not chunks:
+        chunks.append({
+            "week_number": week,
+            "page_number": page,
+            "section_title": "",
+            "content": markdown,
+            "content_type": "text",
+            "is_counterexample": False,
+            "metadata": {},
+            "contextualized_content": f"{COURSE_SUMMARY}\n\nWeek {week}, Page {page}\n\n{markdown}",
+        })
+
+    return chunks
+
+
+def normalize(vec: list[float]) -> list[float]:
+    arr = np.array(vec)
+    norm = np.linalg.norm(arr)
+    if norm == 0:
+        return vec
+    return (arr / norm).tolist()
+
+
+def embed_texts(texts: list[str]) -> list[list[float]]:
+    batch_size = 20
+    all_embeddings = []
+    for i in range(0, len(texts), batch_size):
+        batch = texts[i : i + batch_size]
+        result = genai.embed_content(
+            model=f"models/{EMBED_MODEL}",
+            content=batch,
+            task_type="retrieval_document",
+            output_dimensionality=EMBED_DIM,
+        )
+        for emb in result["embedding"]:
+            all_embeddings.append(normalize(emb))
+    return all_embeddings
+
+
+def main():
+    json_files = sorted(PARSED_DIR.glob("*.json"))
+    print(f"Found {len(json_files)} parsed lecture files")
+
+    all_chunks = []
+    for jf in json_files:
+        data = json.loads(jf.read_text(encoding="utf-8"))
+        week = data["week_number"]
+        for page_data in data["pages"]:
+            page_chunks = chunk_page_markdown(page_data["markdown"], week, page_data["page"])
+            all_chunks.extend(page_chunks)
+
+    print(f"Total chunks: {len(all_chunks)}")
+
+    texts_to_embed = [c["contextualized_content"] for c in all_chunks]
+    print("Generating embeddings...")
+    embeddings = embed_texts(texts_to_embed)
+    print(f"Generated {len(embeddings)} embeddings (dim={EMBED_DIM})")
+
+    print("Uploading to Supabase...")
+    batch_size = 50
+    for i in range(0, len(all_chunks), batch_size):
+        batch = all_chunks[i : i + batch_size]
+        batch_embeddings = embeddings[i : i + batch_size]
+
+        rows = []
+        for chunk, emb in zip(batch, batch_embeddings):
+            rows.append({
+                "week_number": chunk["week_number"],
+                "page_number": chunk["page_number"],
+                "section_title": chunk["section_title"],
+                "content": chunk["content"],
+                "content_type": chunk["content_type"],
+                "is_counterexample": chunk["is_counterexample"],
+                "metadata": chunk["metadata"],
+                "embedding": emb,
+            })
+
+        supabase.table("lecture_chunks").insert(rows).execute()
+        print(f"  Uploaded {min(i + batch_size, len(all_chunks))}/{len(all_chunks)}")
+
+    print(f"\n✅ Done. {len(all_chunks)} chunks embedded and stored.")
+
+
+if __name__ == "__main__":
+    main()

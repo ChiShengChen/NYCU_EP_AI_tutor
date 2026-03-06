@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Parsed outputs (regenerable)
+parsed_output/
+parsed_lectures/
+vision_poc_pages/
+
+# Source PDFs (too large for git, not needed for deployment)
+雷射導論課程講義/
+
+# Environment
+.env
+.env.local
+
+# OS
+.DS_Store
+
+# POC outputs
+*.png
