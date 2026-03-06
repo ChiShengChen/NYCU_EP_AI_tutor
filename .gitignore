@@ -20,3 +20,6 @@ vision_poc_pages/
 
 # POC outputs
 *.png
+
+# Allow docs screenshots
+!docs/*.png

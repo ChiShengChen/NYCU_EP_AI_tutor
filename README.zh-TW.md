@@ -6,7 +6,13 @@
 
 ## Live Demo
 
-Production URL: https://web-eight-hazel-22.vercel.app
+https://web-eight-hazel-22.vercel.app
+
+## 首頁截圖
+
+![首頁 — 模式選擇](docs/homepage.png)
+
+三種學習模式：**教學模式**（逐週逐頁講義導讀）、**自由問答**（RAG 智慧對話）、**自動測驗**（AI 根據薄弱概念自動出題）。
 
 ## 架構概覽
 
@@ -47,16 +53,35 @@ graph TD
     O --> P[儲存對話紀錄與引用區塊]
 ```
 
+### 自動測驗流程
+
+```mermaid
+graph TD
+    A[學生進入測驗模式] --> B[POST /api/quiz action=generate]
+    B --> C[從 student_state 取得薄弱概念]
+    C --> D{掌握度 < 0.6？}
+    D -->|是| E[RAG 檢索薄弱概念相關內容]
+    D -->|無薄弱概念| F[生成入門基礎測驗]
+    E --> G[Gemini generateObject 結構化輸出]
+    F --> G
+    G --> H[回傳結構化測驗：3 選擇 + 2 簡答]
+    H --> I[學生作答]
+    I --> J[POST /api/quiz action=grade]
+    J --> K[Gemini 批改答案]
+    K --> L[更新 student_state 掌握度]
+    L --> M[回傳每題回饋與整體學習建議]
+```
+
 ## 技術棧
 
 | 類別 | 技術 | 版本 | 用途 |
 | :--- | :--- | :--- | :--- |
 | Frontend | Next.js | 16.1.6 | 應用程式框架 |
 | Frontend | React | 19.2.3 | 使用者介面庫 |
-| AI SDK | Vercel AI SDK | 6.0.116 | AI 整合框架 |
+| AI SDK | Vercel AI SDK | 6.0.116 | AI 整合框架（串流、工具呼叫、結構化輸出） |
 | AI SDK | @ai-sdk/react | 3.0.118 | React 鉤子與組件 |
 | AI SDK | @ai-sdk/google | 3.0.43 | Google AI 模型適配器 |
-| LLM | Google Gemini 2.5 Flash | - | 文本生成與視覺解析 |
+| LLM | Google Gemini 2.5 Flash | - | 文本生成、視覺解析、測驗出題 |
 | Embedding | gemini-embedding-001 | 768-dim | 向量嵌入模型 |
 | Vector DB | Supabase | pgvector | 向量資料庫與後端服務 |
 | Styling | Tailwind CSS | v4 | 樣式框架 |
@@ -65,7 +90,7 @@ graph TD
 | Web Search | Brave Search API | - | 外部資訊檢索 |
 | PDF Parsing | google-generativeai | Python | PDF 視覺解析 |
 | PDF Parsing | pypdfium2 | - | PDF 處理庫 |
-| Validation | Zod | v4 | 模式驗證 |
+| Validation | Zod | v4 | 模式驗證與結構化輸出 |
 | Deployment | Vercel | Free Tier | 雲端部署平台 |
 
 ## 資料庫架構
@@ -121,6 +146,8 @@ erDiagram
 AI_tutor_NYCU_EP/
 ├── README.md                          # English (default)
 ├── README.zh-TW.md                    # 繁體中文
+├── docs/
+│   └── homepage.png                   # 首頁截圖
 ├── .gitignore
 ├── scripts/
 │   ├── parse_pdfs.py                  # Gemini Vision PDF 解析（具備重試與速率限制）
@@ -132,12 +159,18 @@ AI_tutor_NYCU_EP/
 ├── web/                               # Next.js 應用程式（部署至 Vercel）
 │   ├── src/
 │   │   ├── app/
-│   │   │   ├── api/chat/route.ts      # 對話 API：RAG、Gemini 串流與工具呼叫
+│   │   │   ├── api/
+│   │   │   │   ├── chat/route.ts      # 對話 API：RAG、Gemini 串流與工具呼叫
+│   │   │   │   ├── lectures/route.ts  # 講義 API：教學模式的週次/頁面資料
+│   │   │   │   └── quiz/route.ts      # 測驗 API：Gemini 結構化輸出生成與批改
 │   │   │   ├── layout.tsx             # 根佈局（KaTeX 樣式、繁體中文語系）
-│   │   │   ├── page.tsx
+│   │   │   ├── page.tsx               # 模式路由（教學 / 問答 / 測驗）
 │   │   │   └── globals.css
 │   │   ├── components/
-│   │   │   ├── chat.tsx               # 對話介面（AI SDK v6 useChat）
+│   │   │   ├── chat.tsx               # 自由問答對話介面（AI SDK v6 useChat）
+│   │   │   ├── teaching-mode.tsx      # 教學模式：週次選擇 → 頁面瀏覽 + AI 解說
+│   │   │   ├── quiz-mode.tsx          # 自動測驗：出題 → 作答 → 批改 → 結果
+│   │   │   ├── mode-selector.tsx      # 首頁模式選擇卡片
 │   │   │   └── markdown-renderer.tsx  # Markdown 與 LaTeX 渲染組件
 │   │   └── lib/
 │   │       ├── rag.ts                 # 透過 Supabase RPC 進行向量搜尋
@@ -152,6 +185,9 @@ AI_tutor_NYCU_EP/
 
 ## 核心功能
 
+- **三種學習模式** — 教學模式（逐頁講義導讀）、自由問答（RAG 對話）、自動測驗（AI 智慧出題）。
+- **自動測驗生成** — AI 分析學生薄弱概念（掌握度 < 60%），自動生成針對性測驗（3 選擇 + 2 簡答），批改後更新掌握度分數。
+- **教學模式** — 按週瀏覽講義，逐頁學習。AI 自動解說每頁內容，支援針對當前頁面的追問。
 - **基於視覺的 PDF 解析** — 不使用傳統 OCR，而是透過 Gemini Vision 直接解析物理公式與圖表。
 - **脈絡化文本切分** — 在檢索區塊前加入課程 Metadata 前綴，提升檢索精準度。
 - **pgvector 向量搜尋** — 使用 768 維 Gemini 嵌入向量進行餘弦相似度搜尋。
@@ -222,16 +258,21 @@ vercel --prod
 
 透過 Vercel Dashboard 或 CLI 設定環境變數。系統會自動偵測 Next.js 並使用 Turbopack 進行建置。
 
-## AI 工具
+## AI 工具與 API
 
-| 工具 | 用途 |
-| :--- | :--- |
-| updateStudentModel | 在每次回答後，Gemini 評估學生的掌握程度並更新至 `student_state` 資料表 |
-| webSearch | 當講義內容不足以回答問題時，呼叫 Brave Search API 搜尋補充資訊 |
+| 端點 / 工具 | 觸發時機 | 功能 |
+| :--- | :--- | :--- |
+| `POST /api/chat` | 使用者發送訊息 | RAG 檢索 → Gemini 串流回覆，含工具呼叫 |
+| `POST /api/lectures` | 教學模式瀏覽 | 回傳講義結構（週次、頁面、內容區塊） |
+| `POST /api/quiz` | 測驗模式 | 根據薄弱概念生成測驗 / 批改答案 |
+| `updateStudentModel` | 每次實質回答後 | 評估學生掌握度（0-1 分）並記錄迷思概念 |
+| `webSearch` | 講義內容不足以回答時 | 呼叫 Brave Search API 搜尋補充資訊 |
 
 ## 未來展望
 
-- 根據學生薄弱概念自動生成測驗
-- 為授課教師提供知識追蹤儀表板
-- 支援電子物理系其他課程
-- 整合 GitHub 實現 CI/CD 自動部署
+- [x] 根據學生薄弱概念自動生成測驗
+- [x] 教學模式（逐週逐頁講義導讀）
+- [x] 整合 GitHub 實現 CI/CD 自動部署
+- [ ] 為授課教師提供知識追蹤儀表板
+- [ ] 支援電子物理系其他課程
+- [ ] 測驗歷史紀錄與學習進度分析

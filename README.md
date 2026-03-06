@@ -8,6 +8,12 @@ RAG-based AI teaching assistant for the "Introduction to Lasers" course at NYCU 
 
 https://web-eight-hazel-22.vercel.app
 
+## Screenshot
+
+![Homepage — Mode Selector](docs/homepage.png)
+
+Three learning modes: **Teaching Mode** (lecture-by-lecture walkthrough), **Free Q&A** (RAG-powered chat), and **Auto Quiz** (AI-generated quizzes based on weak concepts).
+
 ## Architecture
 
 The system consists of an offline data pipeline and a runtime chat flow.
@@ -47,16 +53,35 @@ graph TD
     O --> P[Save chat messages + chunk references to DB]
 ```
 
+### Auto Quiz Flow
+
+```mermaid
+graph TD
+    A[Student enters Quiz Mode] --> B[POST /api/quiz action=generate]
+    B --> C[Fetch weak concepts from student_state]
+    C --> D{mastery < 0.6?}
+    D -->|Yes| E[RAG retrieval for weak concepts]
+    D -->|No concepts| F[Generate intro quiz with default topics]
+    E --> G[Gemini generateObject with Zod schema]
+    F --> G
+    G --> H[Return structured quiz: 3 MC + 2 short answer]
+    H --> I[Student answers questions]
+    I --> J[POST /api/quiz action=grade]
+    J --> K[Gemini grades answers]
+    K --> L[Update student_state mastery scores]
+    L --> M[Return per-question feedback + overall advice]
+```
+
 ## Tech Stack
 
 | Category | Technology | Version | Purpose |
 | :--- | :--- | :--- | :--- |
 | Frontend | Next.js | 16.1.6 | Application framework |
 | Frontend | React | 19.2.3 | UI library |
-| AI SDK | Vercel AI SDK | 6.0.116 | Streaming, tool calling, message protocol |
+| AI SDK | Vercel AI SDK | 6.0.116 | Streaming, tool calling, structured output |
 | AI SDK | @ai-sdk/react | 3.0.118 | React hooks (useChat) |
 | AI SDK | @ai-sdk/google | 3.0.43 | Google model adapter |
-| LLM | Google Gemini 2.5 Flash | - | Chat generation + vision PDF parsing |
+| LLM | Google Gemini 2.5 Flash | - | Chat generation + vision PDF parsing + quiz generation |
 | Embedding | gemini-embedding-001 | 768-dim | Vector embeddings |
 | Vector DB | Supabase (pgvector) | IVFFlat | Vector similarity search + data storage |
 | Styling | Tailwind CSS | v4 | Utility-first CSS |
@@ -64,7 +89,7 @@ graph TD
 | Markdown | react-markdown | 10.1.0 | Markdown parsing with remark-math + rehype-katex |
 | Web Search | Brave Search API | - | Fallback for out-of-scope questions |
 | PDF Parsing | google-generativeai (Python) | - | Vision-based PDF page extraction |
-| Validation | Zod | v4 | Schema validation for tool inputs |
+| Validation | Zod | v4 | Schema validation for tool inputs + structured output |
 | Deployment | Vercel | Free Tier | Hosting + serverless functions |
 
 ## Database Schema
@@ -122,6 +147,8 @@ erDiagram
 AI_tutor_NYCU_EP/
 ├── README.md                          # English (default)
 ├── README.zh-TW.md                    # 繁體中文
+├── docs/
+│   └── homepage.png                   # Homepage screenshot
 ├── .gitignore
 ├── scripts/
 │   ├── parse_pdfs.py                  # Gemini Vision PDF parsing (retry + rate limiting)
@@ -133,12 +160,18 @@ AI_tutor_NYCU_EP/
 ├── web/                               # Next.js app (deployed to Vercel)
 │   ├── src/
 │   │   ├── app/
-│   │   │   ├── api/chat/route.ts      # Chat API: RAG + Gemini streaming + tool calling
+│   │   │   ├── api/
+│   │   │   │   ├── chat/route.ts      # Chat API: RAG + Gemini streaming + tool calling
+│   │   │   │   ├── lectures/route.ts  # Lectures API: week/page data for teaching mode
+│   │   │   │   └── quiz/route.ts      # Quiz API: generate + grade with Gemini structured output
 │   │   │   ├── layout.tsx             # Root layout (KaTeX CSS, zh-Hant locale)
-│   │   │   ├── page.tsx
+│   │   │   ├── page.tsx               # Mode router (teaching / Q&A / quiz)
 │   │   │   └── globals.css
 │   │   ├── components/
-│   │   │   ├── chat.tsx               # Chat UI (AI SDK v6 useChat + DefaultChatTransport)
+│   │   │   ├── chat.tsx               # Free Q&A chat (AI SDK v6 useChat)
+│   │   │   ├── teaching-mode.tsx      # Teaching mode: week grid → page viewer + AI explanation
+│   │   │   ├── quiz-mode.tsx          # Auto quiz: generate → answer → grade → results
+│   │   │   ├── mode-selector.tsx      # Landing page with 3 mode cards
 │   │   │   └── markdown-renderer.tsx  # Markdown + LaTeX + counterexample rendering
 │   │   └── lib/
 │   │       ├── rag.ts                 # Vector search via Supabase RPC
@@ -153,6 +186,9 @@ AI_tutor_NYCU_EP/
 
 ## Key Features
 
+- **Three Learning Modes** — Teaching mode (lecture walkthrough), Free Q&A (RAG chat), and Auto Quiz (AI-generated tests).
+- **Auto Quiz Generation** — AI analyzes student weak concepts (mastery < 60%) and generates targeted quizzes with 3 multiple-choice + 2 short-answer questions. Grades answers and updates mastery scores.
+- **Teaching Mode** — Browse lectures week-by-week, page-by-page. AI automatically explains each page with follow-up Q&A scoped to current content.
 - **Vision-based PDF parsing** — Uses Gemini Vision to read PDF pages as images, accurately capturing physics formulas, diagrams, and bilingual content. No traditional OCR.
 - **Contextual chunking** — Each chunk is prefixed with course metadata (week, page, section) to improve retrieval relevance.
 - **RAG with pgvector** — 768-dimensional Gemini embeddings with cosine similarity search via Supabase RPC.
@@ -234,18 +270,21 @@ vercel --prod
 
 Set environment variables via the Vercel Dashboard or CLI (`vercel env add`). The framework is auto-detected as Next.js and builds with Turbopack.
 
-## AI Tools
+## AI Tools & APIs
 
-The chat API exposes two tools to Gemini via Vercel AI SDK tool calling:
-
-| Tool | Trigger | Action |
+| Endpoint / Tool | Trigger | Action |
 | :--- | :--- | :--- |
-| `updateStudentModel` | After every substantive answer | Assesses student mastery (0-1 score) per concept, records misconceptions to `student_state` table |
-| `webSearch` | When lecture content is insufficient | Queries Brave Search API, returns top 3 results as supplementary context |
+| `POST /api/chat` | User sends message | RAG retrieval → Gemini streaming response with tool calls |
+| `POST /api/lectures` | Teaching mode navigation | Returns lecture structure (weeks, pages, chunks) |
+| `POST /api/quiz` | Quiz mode | Generates quizzes from weak concepts / grades answers |
+| `updateStudentModel` | After every substantive answer | Assesses student mastery (0-1 score) per concept, records misconceptions |
+| `webSearch` | When lecture content is insufficient | Queries Brave Search API, returns top 3 results |
 
 ## Roadmap
 
-- [ ] Auto-generate quizzes based on weak concepts
+- [x] Auto-generate quizzes based on weak concepts
+- [x] Teaching mode (lecture-by-lecture walkthrough)
+- [x] GitHub CI/CD auto-deploy via Vercel
 - [ ] Knowledge tracing dashboard for instructors
 - [ ] Multi-course support for other EP department courses
-- [ ] GitHub integration for CI/CD auto-deploy
+- [ ] Quiz history and progress analytics
