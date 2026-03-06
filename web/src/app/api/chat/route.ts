@@ -1,12 +1,12 @@
 import { google } from "@ai-sdk/google";
 import { streamText, tool, convertToModelMessages } from "ai";
 import { z } from "zod";
-import { retrieveChunks, formatChunksForPrompt } from "@/lib/rag";
+import { retrieveChunks, formatChunksForPrompt, type RetrievedChunk } from "@/lib/rag";
 import { createServiceClient } from "@/lib/supabase/server";
 
 export const maxDuration = 60;
 
-const SYSTEM_PROMPT = `你是交通大學電物系「雷射導論」課程的 AI 助教。
+const QA_SYSTEM_PROMPT = `你是交通大學電物系「雷射導論」課程的 AI 助教。
 
 你的角色：
 - 幫助學生理解雷射物理的概念、公式推導、和物理意義
@@ -25,8 +25,27 @@ const SYSTEM_PROMPT = `你是交通大學電物系「雷射導論」課程的 AI
 
 {context}`;
 
+const TEACHING_SYSTEM_PROMPT = `你是交通大學電物系「雷射導論」課程的 AI 助教，現在正在「教學模式」中。
+
+你的角色：
+- 根據以下講義內容，為學生提供清晰、完整的教學說明
+- 用繁體中文教學，專有名詞可附英文
+- 數學公式用 LaTeX 格式：行內 $...$ 或獨立 $$...$$
+
+教學模式規則：
+1. 學生正在逐頁閱讀講義，你要幫助他們理解當前頁面的內容
+2. 系統性地解釋頁面中的概念、公式、圖表
+3. 推導公式時保持完整邏輯鏈，不跳步驟
+4. 如果內容有標記為 ⚠️ 反例的部分，務必說明那是錯誤示範並解釋原因
+5. 鼓勵學生提出問題，並針對當前頁面的內容回答追問
+6. 適時連結前後頁面的概念，幫助學生建立完整的知識體系
+
+當前講義內容（Week {week}, Page {page}）：
+
+{context}`;
+
 export async function POST(req: Request) {
-  const { messages, studentId } = await req.json();
+  const { messages, studentId, mode, weekNumber, pageNumber } = await req.json();
 
   // Lazy-create anonymous student profile if needed
   if (studentId) {
@@ -47,9 +66,41 @@ export async function POST(req: Request) {
           .map((p) => p.text)
           .join("") ?? "";
 
-  const chunks = await retrieveChunks(query);
-  const context = formatChunksForPrompt(chunks);
-  const chunkIds = chunks.map((c) => c.id);
+  let context: string;
+  let chunkIds: number[];
+  let systemPrompt: string;
+
+  if (mode === "teaching" && weekNumber != null && pageNumber != null) {
+    // Teaching mode: fetch chunks directly by week/page
+    const supabaseForChunks = createServiceClient();
+    const { data: pageChunks, error: chunkError } = await supabaseForChunks
+      .from("lecture_chunks")
+      .select("id, week_number, page_number, section_title, content, content_type, is_counterexample")
+      .eq("week_number", weekNumber)
+      .eq("page_number", pageNumber)
+      .order("id");
+
+    if (chunkError) {
+      console.error("Teaching mode chunk fetch error:", chunkError);
+    }
+
+    const chunks = (pageChunks ?? []).map((c) => ({
+      ...c,
+      similarity: 1,
+    }));
+    context = formatChunksForPrompt(chunks as RetrievedChunk[]);
+    chunkIds = chunks.map((c) => c.id);
+    systemPrompt = TEACHING_SYSTEM_PROMPT
+      .replace("{week}", String(weekNumber))
+      .replace("{page}", String(pageNumber))
+      .replace("{context}", context);
+  } else {
+    // Q&A mode: RAG similarity search
+    const chunks = await retrieveChunks(query);
+    context = formatChunksForPrompt(chunks);
+    chunkIds = chunks.map((c) => c.id);
+    systemPrompt = QA_SYSTEM_PROMPT.replace("{context}", context);
+  }
 
   // Convert UIMessages → ModelMessages for streamText (with fallback for robustness)
   let modelMessages;
@@ -65,7 +116,7 @@ export async function POST(req: Request) {
 
   const result = streamText({
     model: google(process.env.CHAT_MODEL ?? "gemini-2.5-flash"),
-    system: SYSTEM_PROMPT.replace("{context}", context),
+    system: systemPrompt,
     messages: modelMessages,
     tools: {
       updateStudentModel: tool({

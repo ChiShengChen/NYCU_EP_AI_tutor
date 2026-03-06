@@ -18,7 +18,7 @@ function getTextContent(message: UIMessage): string {
     .join("");
 }
 
-export function Chat() {
+export function Chat({ onBack }: { onBack?: () => void } = {}) {
   const [studentId] = useState(() => {
     if (typeof window === "undefined") return "";
     const stored = localStorage.getItem("laser_tutor_student_id");
@@ -58,6 +58,17 @@ export function Chat() {
   return (
     <div className="flex flex-col h-screen max-w-3xl mx-auto">
       <header className="flex items-center gap-2 px-4 py-3 border-b border-slate-200 bg-white shrink-0">
+        {onBack && (
+          <button
+            onClick={onBack}
+            className="p-1 rounded-lg hover:bg-slate-100 transition-colors text-slate-600"
+            aria-label="返回"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+        )}
         <span className="text-xl">⚡</span>
         <h1 className="text-lg font-semibold text-slate-800">雷射導論 AI 助教</h1>
         <span className="text-xs text-slate-400 ml-auto">NYCU 電物系</span>
