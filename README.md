@@ -12,7 +12,7 @@ https://web-eight-hazel-22.vercel.app
 
 ![Homepage — Mode Selector](docs/homepage.png)
 
-Three learning modes: **Teaching Mode** (lecture-by-lecture walkthrough), **Free Q&A** (RAG-powered chat), and **Auto Quiz** (AI-generated quizzes based on weak concepts).
+Eight learning modes: **Teaching Mode** (lecture-by-lecture walkthrough), **Free Q&A** (RAG-powered chat), **Auto Quiz** (AI-generated quizzes based on weak concepts), **Exam Simulation** (timed midterm/final exams with batch grading), **Concept Knowledge Graph** (interactive prerequisite visualization), **AI Study Plan** (spaced repetition + personalized weekly plan), **Learning Dashboard** (mastery radar chart, trends, activity stats), and **Chat History** (session-based conversation replay).
 
 ## Architecture
 
@@ -86,7 +86,8 @@ graph TD
 | Vector DB | Supabase (pgvector) | IVFFlat | Vector similarity search + data storage |
 | Styling | Tailwind CSS | v4 | Utility-first CSS |
 | Math | KaTeX | 0.16.35 | LaTeX formula rendering |
-| Markdown | react-markdown | 10.1.0 | Markdown parsing with remark-math + rehype-katex |
+| Markdown | react-markdown | 10.1.0 | Markdown parsing with remark-math + remark-gfm + rehype-katex |
+| Charts | Recharts | 2.x | Radar chart, trend lines, activity bar charts |
 | Web Search | Brave Search API | - | Fallback for out-of-scope questions |
 | PDF Parsing | google-generativeai (Python) | - | Vision-based PDF page extraction |
 | Validation | Zod | v4 | Schema validation for tool inputs + structured output |
@@ -153,6 +154,7 @@ AI_tutor_NYCU_EP/
 ├── scripts/
 │   ├── parse_pdfs.py                  # Gemini Vision PDF parsing (retry + rate limiting)
 │   ├── chunk_and_embed.py             # Contextual chunking + embedding pipeline
+│   ├── extract_slides.py             # PDF → JPEG → Supabase Storage upload
 │   └── requirements.txt
 ├── supabase/
 │   └── migrations/
@@ -163,16 +165,25 @@ AI_tutor_NYCU_EP/
 │   │   │   ├── api/
 │   │   │   │   ├── chat/route.ts      # Chat API: RAG + Gemini streaming + tool calling
 │   │   │   │   ├── lectures/route.ts  # Lectures API: week/page data for teaching mode
-│   │   │   │   └── quiz/route.ts      # Quiz API: generate + grade with Gemini structured output
+│   │   │   │   ├── quiz/route.ts      # Quiz API: generate + grade with structured output
+│   │   │   │   ├── exam/route.ts      # Exam API: timed midterm/final simulation
+│   │   │   │   ├── dashboard/route.ts # Dashboard API: mastery stats + activity data
+│   │   │   │   ├── history/route.ts   # History API: session-grouped chat replay
+│   │   │   │   └── study-plan/route.ts# Study Plan API: forgetting curve + AI plan
 │   │   │   ├── layout.tsx             # Root layout (KaTeX CSS, zh-Hant locale)
-│   │   │   ├── page.tsx               # Mode router (teaching / Q&A / quiz)
+│   │   │   ├── page.tsx               # Mode router (8 modes)
 │   │   │   └── globals.css
 │   │   ├── components/
 │   │   │   ├── chat.tsx               # Free Q&A chat (AI SDK v6 useChat)
-│   │   │   ├── teaching-mode.tsx      # Teaching mode: week grid → page viewer + AI explanation
+│   │   │   ├── teaching-mode.tsx      # Teaching mode: week grid → slide + AI explanation
 │   │   │   ├── quiz-mode.tsx          # Auto quiz: generate → answer → grade → results
-│   │   │   ├── mode-selector.tsx      # Landing page with 3 mode cards
-│   │   │   └── markdown-renderer.tsx  # Markdown + LaTeX + counterexample rendering
+│   │   │   ├── exam-mode.tsx          # Exam simulation: timed, batch grading, letter grades
+│   │   │   ├── knowledge-graph.tsx    # Concept graph: SVG desktop + card list mobile
+│   │   │   ├── study-plan.tsx         # Spaced repetition + AI personalized study plan
+│   │   │   ├── dashboard.tsx          # Learning dashboard: radar, trends, activity charts
+│   │   │   ├── chat-history.tsx       # Chat history: session list + conversation replay
+│   │   │   ├── mode-selector.tsx      # Landing page with 8 mode cards (3+3+2 layout)
+│   │   │   └── markdown-renderer.tsx  # Markdown + LaTeX + GFM table rendering
 │   │   └── lib/
 │   │       ├── rag.ts                 # Vector search via Supabase RPC
 │   │       └── supabase/
@@ -186,17 +197,20 @@ AI_tutor_NYCU_EP/
 
 ## Key Features
 
-- **Three Learning Modes** — Teaching mode (lecture walkthrough), Free Q&A (RAG chat), and Auto Quiz (AI-generated tests).
-- **Auto Quiz Generation** — AI analyzes student weak concepts (mastery < 60%) and generates targeted quizzes with 3 multiple-choice + 2 short-answer questions. Grades answers and updates mastery scores.
-- **Teaching Mode** — Browse lectures week-by-week, page-by-page. AI automatically explains each page with follow-up Q&A scoped to current content.
-- **Vision-based PDF parsing** — Uses Gemini Vision to read PDF pages as images, accurately capturing physics formulas, diagrams, and bilingual content. No traditional OCR.
-- **Contextual chunking** — Each chunk is prefixed with course metadata (week, page, section) to improve retrieval relevance.
+- **Eight Learning Modes** — Teaching, Free Q&A, Auto Quiz, Exam Simulation, Concept Graph, AI Study Plan, Dashboard, and Chat History.
+- **Exam Simulation** — Timed midterm/final mock exams (50/60 min). 7 multiple-choice + 3 short-answer questions. No answers shown during exam. Batch grading with letter grades (A+ to F) and per-question feedback.
+- **Concept Knowledge Graph** — Interactive SVG visualization of 16 laser physics concepts across 4 categories (Optics, Resonator, Quantum, Laser). Shows prerequisite relationships. Click to explore or jump to teaching mode. Mobile-responsive card layout.
+- **AI Study Plan** — Spaced repetition based on forgetting curve (retention = mastery × e^(-days/7)). Gemini generates personalized weekly plan with review priorities and specific exercise suggestions.
+- **Learning Dashboard** — Mastery radar chart, score trend line, activity heatmap, and detailed concept mastery table. 6 summary stat cards. Powered by Recharts.
+- **Chat History** — Session-based conversation replay grouped by 30-minute gaps. Browse past Q&A interactions with timestamps.
+- **Auto Quiz Generation** — AI analyzes student weak concepts (mastery < 60%) and generates targeted quizzes. Grades answers and updates mastery scores.
+- **Teaching Mode** — Browse lectures week-by-week with original slide images. AI automatically explains each page with follow-up Q&A.
+- **Vision-based PDF parsing** — Uses Gemini Vision to read PDF pages as images, accurately capturing physics formulas, diagrams, and bilingual content.
 - **RAG with pgvector** — 768-dimensional Gemini embeddings with cosine similarity search via Supabase RPC.
-- **Gemini 2.5 Flash streaming** — Real-time streaming responses with Vercel AI SDK v6 UIMessage protocol.
 - **Student knowledge tracking** — Automatically assesses mastery per concept and detects misconceptions via tool calling.
 - **Brave Search fallback** — When lecture content is insufficient, the system searches the web for supplementary information.
 - **LaTeX rendering** — KaTeX renders inline and display math formulas in real time during streaming.
-- **Counterexample detection** — Flags common physics misconceptions from lecture materials with warnings.
+- **Mobile responsive** — All 8 modes support mobile screens with adaptive layouts (card lists, select dropdowns, stacked buttons).
 - **Anonymous student profiles** — UUID-based identification via localStorage, no registration required.
 
 ## Environment Variables
@@ -277,14 +291,23 @@ Set environment variables via the Vercel Dashboard or CLI (`vercel env add`). Th
 | `POST /api/chat` | User sends message | RAG retrieval → Gemini streaming response with tool calls |
 | `POST /api/lectures` | Teaching mode navigation | Returns lecture structure (weeks, pages, chunks) |
 | `POST /api/quiz` | Quiz mode | Generates quizzes from weak concepts / grades answers |
+| `POST /api/exam` | Exam simulation | Generates timed midterm/final exams / batch grades |
+| `GET /api/dashboard` | Dashboard view | Returns mastery stats, activity heatmap, trend data |
+| `GET /api/history` | Chat history view | Returns session-grouped chat messages |
+| `GET /api/study-plan` | Study plan view | Forgetting curve analysis + AI-generated study plan |
 | `updateStudentModel` | After every substantive answer | Assesses student mastery (0-1 score) per concept, records misconceptions |
 | `webSearch` | When lecture content is insufficient | Queries Brave Search API, returns top 3 results |
 
 ## Roadmap
 
 - [x] Auto-generate quizzes based on weak concepts
-- [x] Teaching mode (lecture-by-lecture walkthrough)
+- [x] Teaching mode with original slide images
+- [x] Exam simulation (timed midterm/final mock exams)
+- [x] Concept knowledge graph (interactive prerequisite visualization)
+- [x] Spaced repetition + AI personalized study plan
+- [x] Learning dashboard (radar chart, trends, activity stats)
+- [x] Chat history with session replay
+- [x] Mobile responsive design (RWD)
 - [x] GitHub CI/CD auto-deploy via Vercel
 - [ ] Knowledge tracing dashboard for instructors
 - [ ] Multi-course support for other EP department courses
-- [ ] Quiz history and progress analytics
