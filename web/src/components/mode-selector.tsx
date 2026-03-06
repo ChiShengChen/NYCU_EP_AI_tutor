@@ -1,7 +1,7 @@
 "use client";
 
 interface ModeSelectorProps {
-  onSelectMode: (mode: "teaching" | "qa" | "quiz" | "dashboard" | "history") => void;
+  onSelectMode: (mode: "teaching" | "qa" | "quiz" | "exam" | "graph" | "study-plan" | "dashboard" | "history") => void;
 }
 
 export function ModeSelector({ onSelectMode }: ModeSelectorProps) {
@@ -20,7 +20,7 @@ export function ModeSelector({ onSelectMode }: ModeSelectorProps) {
           <p className="text-slate-500">請選擇學習模式</p>
         </div>
 
-        {/* Top row: 3 main modes */}
+        {/* Top row: 3 main learning modes */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 max-w-4xl w-full mb-5">
           <button
             onClick={() => onSelectMode("teaching")}
@@ -61,6 +61,51 @@ export function ModeSelector({ onSelectMode }: ModeSelectorProps) {
             </p>
             <span className="px-5 py-2 rounded-xl bg-indigo-600 text-white text-sm font-medium group-hover:bg-indigo-700 transition-colors">
               開始測驗
+            </span>
+          </button>
+        </div>
+
+        {/* Middle row: 3 advanced features */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 max-w-4xl w-full mb-5">
+          <button
+            onClick={() => onSelectMode("exam")}
+            className="group flex flex-col items-center text-center p-6 bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md hover:border-indigo-300 hover:-translate-y-1 transition-all duration-200 cursor-pointer"
+          >
+            <span className="text-4xl mb-3 group-hover:scale-110 transition-transform">🎓</span>
+            <h3 className="text-lg font-semibold text-slate-800 mb-1.5">考試模擬</h3>
+            <p className="text-sm text-slate-500 mb-5 leading-relaxed">
+              限時模擬期中期末考，交卷後統一批改
+            </p>
+            <span className="px-5 py-2 rounded-xl bg-indigo-600 text-white text-sm font-medium group-hover:bg-indigo-700 transition-colors">
+              模擬考試
+            </span>
+          </button>
+
+          <button
+            onClick={() => onSelectMode("graph")}
+            className="group flex flex-col items-center text-center p-6 bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md hover:border-indigo-300 hover:-translate-y-1 transition-all duration-200 cursor-pointer"
+          >
+            <span className="text-4xl mb-3 group-hover:scale-110 transition-transform">🧠</span>
+            <h3 className="text-lg font-semibold text-slate-800 mb-1.5">概念圖譜</h3>
+            <p className="text-sm text-slate-500 mb-5 leading-relaxed">
+              視覺化概念先後關係，點擊跳轉教學
+            </p>
+            <span className="px-5 py-2 rounded-xl bg-indigo-600 text-white text-sm font-medium group-hover:bg-indigo-700 transition-colors">
+              探索圖譜
+            </span>
+          </button>
+
+          <button
+            onClick={() => onSelectMode("study-plan")}
+            className="group flex flex-col items-center text-center p-6 bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md hover:border-indigo-300 hover:-translate-y-1 transition-all duration-200 cursor-pointer"
+          >
+            <span className="text-4xl mb-3 group-hover:scale-110 transition-transform">📅</span>
+            <h3 className="text-lg font-semibold text-slate-800 mb-1.5">AI 學習計畫</h3>
+            <p className="text-sm text-slate-500 mb-5 leading-relaxed">
+              遺忘曲線複習提醒 + 個人化學習計畫
+            </p>
+            <span className="px-5 py-2 rounded-xl bg-indigo-600 text-white text-sm font-medium group-hover:bg-indigo-700 transition-colors">
+              查看計畫
             </span>
           </button>
         </div>
